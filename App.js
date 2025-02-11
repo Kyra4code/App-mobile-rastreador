@@ -1,7 +1,13 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+;import { StyleSheet, Text, View } from 'react-native';
 import MapView, {Marker} from 'react-native-maps';
-import { requestForegroundPermissionsAsync, LocationObject, getCurrentPositionAsync } from 'expo-location';
+import { requestForegroundPermissionsAsync,
+watchPositionAsync,
+Accuracy,
+LocationAccuracy, 
+LocationObject, 
+getCurrentPositionAsync
+} 
+from 'expo-location';
 import { useState, useEffect, useRef } from 'react';
 
 export default function App() {
@@ -31,8 +37,7 @@ export default function App() {
         pitch:70,
         center: response.coords
       })
-    })
-    PermissaoLocalizacao();
+    });
   },[])
 
   return (
