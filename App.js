@@ -11,39 +11,58 @@ from 'expo-location';
 import { useState, useEffect, useRef } from 'react';
 
 export default function App() {
-  const [location, setLocation] = useState<LocationObject | null>(null);
-  const mapRef = useRef<MapView>(null);
+  const [location, setLocation] = useState(null);
+  const mapRef = useRef(null);
 
   async function PermissaoLocalizacao(){
-    const {garantia} = await requestForegroundPermissionsAsync();
-
-    if(garantia){
-      const localizacaoAtual = await getCurrentPositionAsync();
-      await setLocation(localizacaoAtual);
-
-      console.log("sua localização é: "+ localizacaoAtual);
+    try{
+      const {status} = await requestForegroundPermissionsAsync();
+      if(status === 'granted'){
+        const localizacaoAtual = await getCurrentPositionAsync();
+        await setLocation(localizacaoAtual);
+  
+        console.log("sua localização é: "+ JSON.stringify(localizacaoAtual, null, 2));
+      }
+    }catch(error){
+      console.log("Erro ao obter permissão de localização: " + error);
     }
   }
 
   useEffect(()=>{
-    watchPositionAsync({
-      accuracy: LocationAccuracy.Highest,
-      timeInterval: 1000,
-      distanceInterval:1
-    },(response)=>{
-      console.log("Sua nova localização é: " + response);
-      setLocation(response);
-      mapRef.current?.animateCamera({
-        pitch:70,
-        center: response.coords
-      })
-    });
+    PermissaoLocalizacao();
+    let subscription;
+
+    async function watchPosition(){
+      try{
+        subscription = await watchPositionAsync({
+          accuracy: Accuracy.Highest,
+          timeInterval: 1000,
+          distanceInterval:1
+        },(response)=>{
+          console.log("Sua nova localização é: " + JSON.stringify(response, null, 2));
+          setLocation(response);
+          mapRef.current?.animateCamera({
+            pitch:70,
+            center: response.coords
+          })
+        });
+      }catch(error){
+        console.log("Erro ao obter localização: " + error);
+      }
+    }
+
+    watchPosition();
+    return () =>{
+      if(subscription){
+        subscription.remove();
+      }
+    }
   },[])
 
   return (
-    <View styles={styles.container}>
-      {
-        location && <MapView ref={mapRef} styles={styles.map} initialRegion={{
+    <View style={styles.container}>
+      {location?(
+        <MapView ref={mapRef} style={styles.map} initialRegion={{ 
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
           latitudeDelta: 0.005,
@@ -51,10 +70,11 @@ export default function App() {
         }}>
           <Marker coordinate={{
             latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          }}></Marker>
-        </MapView>
-      }
+            longitude: location.coords.longitude
+          }}/></MapView>
+        ):(
+          <Text>Carregando...</Text>
+      )}
     </View>
   );
 }
